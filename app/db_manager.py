@@ -13,21 +13,3 @@ TEAM TASKS:
     *Requirement: This file must demonstrate the ability to store and retrieve 
     data from a relational database[cite: 54, 73].*
 """
-import sqlite3
-
-# Connecting to the database
-conn = sqlite3.connect('university.db')
-cur = conn.cursor()
-
-# Reading a file schema.sql
-with open('data/schema.sql', 'r', encoding='utf-8') as f:
-    sql_script = f.read()
-
-# Running all scripts
-cur.executescript(sql_script)
-
-conn.commit()
-conn.close()
-
-# to check that schema.sql is filled correct (it is)
-# print("Database created and filled with mock data")
