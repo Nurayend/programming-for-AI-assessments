@@ -1,5 +1,3 @@
-![diagram](diagram.svg)
-
 ## Users
 Table to store users' data
 <table><thead>

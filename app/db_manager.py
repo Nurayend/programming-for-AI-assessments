@@ -74,16 +74,16 @@ class DatabaseManager:
         conn = self.get_connection()
         rows = conn.execute("SELECT * FROM Students WHERE status = 'Active'").fetchall()
         conn.close()
-        return [Student(row['id'], row['course_id'], row['graduation_date'], row['status']) for row in rows]
+        return [Student(row['id'], row['graduation_date'], row['status']) for row in rows]
     
-    def add_student(self, student_id, course_id, graduation_date):
+    def add_student(self, student_id, graduation_date):
         """
         CREATE: Add a new student. 
         """
         conn = self.get_connection() 
         try:
-            sql = "INSERT INTO Students (id, course_id, graduation_date, status) VALUES (?, ?, ?, 'Active')"
-            conn.execute(sql, (student_id, course_id, graduation_date))
+            sql = "INSERT INTO Students (id, graduation_date, status) VALUES (?, ?, ?, 'Active')"
+            conn.execute(sql, (student_id, graduation_date))
             conn.commit()
             return True, "Success"
         except sqlite3.IntegrityError as e:
