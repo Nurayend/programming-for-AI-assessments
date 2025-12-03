@@ -8,7 +8,7 @@ DESCRIPTION:
 import sqlite3
 import os
 from datetime import date
-from .models import User, Student, Course, Assessment, Submission, WellbeingResponse
+from models import User, Student, Course, Assessment, Submission, WellbeingResponse
 
 class DatabaseManager:
     def __init__(self, db_path=None):
