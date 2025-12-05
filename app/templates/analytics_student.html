@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>学生个体时序分析</h4>
+<p class="text-muted">输入学生ID，查看其压力水平与睡眠时长的时间序列曲线。</p>
+<form method="get" class="row g-3 mb-3">
+  <div class="col-auto">
+    <label for="student_id" class="col-form-label">学生ID</label>
+  </div>
+  <div class="col-auto">
+    <input type="number" class="form-control" id="student_id" name="student_id" value="{{ student_id or '' }}" placeholder="例如 575001" required>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">查询</button>
+  </div>
+</form>
+
+{% if student_id %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">压力水平随时间变化（Student {{ student_id }}）</div>
+      <div class="card-body text-center">
+        <img class="img-fluid" alt="Stress Time Series" src="/analytics/student/{{ student_id }}/stress.png" />
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">睡眠时长随时间变化（Student {{ student_id }}）</div>
+      <div class="card-body text-center">
+        <img class="img-fluid" alt="Sleep Time Series" src="/analytics/student/{{ student_id }}/sleep.png" />
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+  <div class="alert alert-info">请输入学生ID并点击“查询”。</div>
+{% endif %}
+{% endblock %}
+

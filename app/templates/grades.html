@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>成绩 / 提交管理</h4>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label for="course_id" class="col-form-label">课程</label>
+  </div>
+  <div class="col-auto">
+    <select class="form-select" id="course_id" name="course_id" required>
+      <option value="" disabled {% if not course_id %}selected{% endif %}>请选择课程</option>
+      {% for c in courses %}
+        <option value="{{ c.id }}" {% if course_id and c.id==course_id %}selected{% endif %}>{{ c.name }} (ID: {{ c.id }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label for="assessment_id" class="col-form-label">作业</label>
+  </div>
+  <div class="col-auto">
+    <select class="form-select" id="assessment_id" name="assessment_id" {% if not course_id %}disabled{% endif %} required>
+      <option value="" disabled {% if not assessment_id %}selected{% endif %}>请选择作业</option>
+      {% for a in assessments %}
+        <option value="{{ a.id }}" {% if assessment_id and a.id==assessment_id %}selected{% endif %}>
+          {{ a.title }} (截止: {{ a.deadline }}, 满分: {{ a.max_score }})
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">载入成绩薄</button>
+  </div>
+</form>
+
+{% if course_id and assessment_id %}
+  <div class="card">
+    <div class="card-header">成绩薄（课程ID: {{ course_id }}，作业ID: {{ assessment_id }}）</div>
+    <div class="card-body">
+      <form method="post" action="/grades/upsert">
+        <input type="hidden" name="course_id" value="{{ course_id }}">
+        <input type="hidden" name="assessment_id" value="{{ assessment_id }}">
+        <div class="table-responsive">
+          <table class="table table-striped table-sm align-middle">
+            <thead>
+              <tr>
+                <th>学生ID</th>
+                <th>提交日期</th>
+                <th>得分</th>
+                <th>满分</th>
+                <th>截止日期</th>
+                <th>迟交</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in grade_rows %}
+                <tr>
+                  <td>{{ row.student_id }}</td>
+                  <td style="min-width: 160px;">
+                    <input type="date" class="form-control form-control-sm" name="submission_date_{{ row.student_id }}" value="{{ row.submission_date or '' }}">
+                  </td>
+                  <td style="min-width: 100px;">
+                    <input type="number" step="0.1" min="0" class="form-control form-control-sm" name="score_{{ row.student_id }}" value="{{ row.score or '' }}">
+                  </td>
+                  <td>{{ max_score }}</td>
+                  <td>{{ deadline }}</td>
+                  <td>
+                    {% if row.submission_date and deadline and row.submission_date > deadline %}
+                      <span class="badge bg-warning text-dark">迟交</span>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="text-end">
+          <button class="btn btn-success" type="submit">保存更新</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-secondary">请选择课程与作业以载入成绩薄。</div>
+{% endif %}
+{% endblock %}

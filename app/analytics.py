@@ -18,8 +18,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import date
 
-# 绝对导入，VSCode 直接运行
-from db_manager import DatabaseManager
+# 支持包内相对导入与脚本直接运行
+try:
+    from .db_manager import DatabaseManager
+except ImportError:
+    from db_manager import DatabaseManager
 
 # 初始化 DBManager
 db_manager = DatabaseManager()
@@ -28,7 +31,9 @@ db_manager = DatabaseManager()
 # ------------------------------------------
 # 1. Wellbeing Analysis
 # ------------------------------------------
-def check_at_risk_students(stress_threshold: int = 4) -> pd.DataFrame:
+from typing import Optional
+
+def check_at_risk_students(stress_threshold: int = 4, visualize: bool = True, on_date: Optional[str] = None, latest_only: bool = False) -> pd.DataFrame:
     """
     Identify high-risk students based on stress_level >= threshold.
     Returns a sorted DataFrame with most recent entries first.
@@ -39,28 +44,52 @@ def check_at_risk_students(stress_threshold: int = 4) -> pd.DataFrame:
     if survey_df.empty:
         return pd.DataFrame(columns=['student_id', 'stress_level', 'sleep_hours', 'date', 'Is_At_Risk'])
 
+    # 规范字段类型，防止因类型不一致导致去重失败
+    survey_df['student_id'] = survey_df['student_id'].astype(str).str.strip()
+    survey_df['stress_level'] = pd.to_numeric(survey_df['stress_level'], errors='coerce')
+    survey_df['sleep_hours'] = pd.to_numeric(survey_df['sleep_hours'], errors='coerce')
+
     survey_df['Is_At_Risk'] = survey_df['stress_level'] >= stress_threshold
     survey_df['date'] = pd.to_datetime(survey_df['date'])
 
-    # 可视化: stress_level 分布
-    plt.figure(figsize=(6, 4))
-    sns.countplot(data=survey_df, x='stress_level', hue='Is_At_Risk', palette='Reds')
-    plt.title("Stress Level Distribution (Red = At Risk)")
-    plt.xlabel("Stress Level")
-    plt.ylabel("Count")
-    plt.legend(title="At Risk")
-    plt.tight_layout()
-    plt.show()
-    plt.close()
+    # 日期/去重筛选
+    if on_date:
+        try:
+            target_date = pd.to_datetime(on_date).date()
+            survey_df = survey_df[survey_df['date'].dt.date == target_date]
+        except Exception:
+            # 无法解析日期则不筛选
+            pass
+    elif latest_only:
+        survey_df = survey_df.sort_values(['student_id', 'date']).drop_duplicates('student_id', keep='last')
 
-    at_risk_df = survey_df[survey_df['Is_At_Risk']].sort_values(by='date', ascending=False)
+    # 可视化: stress_level 分布
+    if visualize:
+        plt.figure(figsize=(6, 4))
+        sns.countplot(data=survey_df, x='stress_level', hue='Is_At_Risk', palette='Reds')
+        plt.title("Stress Level Distribution (Red = At Risk)")
+        plt.xlabel("Stress Level")
+        plt.ylabel("Count")
+        plt.legend(title="At Risk")
+        plt.tight_layout()
+        plt.show()
+        plt.close()
+
+    # 最终去重：确保每个学生只出现一次（取该学生筛选集合中最新一条）
+    at_risk_df = survey_df[survey_df['Is_At_Risk']]
+    if not at_risk_df.empty:
+        at_risk_df = (
+            at_risk_df.sort_values(['student_id', 'date'])
+                      .drop_duplicates('student_id', keep='last')
+                      .sort_values(by='date', ascending=False)
+        )
     return at_risk_df
 
 
 # ------------------------------------------
 # 2. Attendance vs Grades Analysis
 # ------------------------------------------
-def calculate_attendance_vs_grades() -> dict:
+def calculate_attendance_vs_grades(visualize: bool = True) -> dict:
     """
     Calculates:
         - Global correlation between average attendance & average score
@@ -98,7 +127,7 @@ def calculate_attendance_vs_grades() -> dict:
     global_correlation = global_df['avg_attendance_rate'].corr(global_df['avg_score']) if len(global_df) >= 2 else None
 
     # 可视化: 全局关系
-    if not global_df.empty:
+    if visualize and not global_df.empty:
         plt.figure(figsize=(6, 4))
         sns.scatterplot(data=global_df, x='avg_attendance_rate', y='avg_score')
         plt.title(f"Global Attendance vs Grades (R={global_correlation:.2f})")
@@ -122,7 +151,7 @@ def calculate_attendance_vs_grades() -> dict:
         course_corr_list.append({'course_id': course_id, 'course_name': course_name, 'Correlation_R': r})
 
         # 可视化: 每门课程关系
-        if not course_df.empty:
+        if visualize and not course_df.empty:
             plt.figure(figsize=(5, 4))
             sns.scatterplot(data=course_df, x='attendance_numeric', y='score')
             plt.title(f"{course_name}: Attendance vs Grades")

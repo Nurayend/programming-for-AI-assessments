@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>Course Director Analysis (Attendance vs. Grades)</h4>
+<div class="row g-3">
+  <div class="col-lg-6 col-md-12">
+    <div class="card h-100">
+      <div class="card-header">Global Scatter Plot</div>
+      <div class="card-body">
+        {% if global_r is not none %}
+          <p>Global Correlation Coefficient R ：<b>{{ '%.4f'|format(global_r) }}</b></p>
+        {% else %}
+          <div class="alert alert-secondary">Insufficient samples to calculate global correlation</div>
+        {% endif %}
+        <img src="/analytics/global_plot.png" alt="Global Plot" class="img-fluid"/>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-md-12">
+    <div class="card h-100">
+      <div class="card-header">Course Average Scatter Plot (Average Attendance vs. Average Grades)</div>
+      <div class="card-body text-center">
+        <img src="/analytics/per_course_avg_scatter.png" alt="Per Course Avg Scatter" class="img-fluid"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Course Relevance Data Table</div>
+      <div class="card-body">
+        {% if table_html %}
+          <div class="table-responsive">{{ table_html|safe }}</div>
+        {% else %}
+          <div class="alert alert-secondary">No course-level data available or insufficient samples</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Individual Student Time Series Analysis (Stress/ Sleep)</div>
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-end mb-3">
+          <div class="col-auto">
+            <label for="student_id" class="col-form-label"> Student ID</label>
+          </div>
+          <div class="col-auto">
+            <input type="number" class="form-control" id="student_id" name="student_id" value="{{ student_id or '' }}" placeholder="例如 575001" required>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Query</button>
+          </div>
+        </form>
+        {% if student_id %}
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">Pressure levels over time（Student {{ student_id }}）</div>
+              <div class="card-body text-center">
+                <img class="img-fluid" alt="Stress Time Series" src="/analytics/student/{{ student_id }}/stress.png" />
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">Sleep duration over time（Student {{ student_id }}）</div>
+              <div class="card-body text-center">
+                <img class="img-fluid" alt="Sleep Time Series" src="/analytics/student/{{ student_id }}/sleep.png" />
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+          <div class="alert alert-info">Please enter Student ID and click 'Search'</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
