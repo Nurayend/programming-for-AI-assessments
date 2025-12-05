@@ -1,26 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
-<h4>学生入学与选课</h4>
+<h4>Student Enrollment and Course Selection</h4>
 <form method="post" class="row g-3">
   <div class="col-md-4">
-    <label for="student_id" class="form-label">学生ID</label>
-    <input type="number" class="form-control" id="student_id" name="student_id" placeholder="例如 100001" required>
+    <label for="student_id" class="form-label">Student ID</label>
+    <input type="number" class="form-control" id="student_id" name="student_id" placeholder="E.g., 100001" required>
   </div>
   <div class="col-md-4">
-    <label for="course_id" class="form-label">选择课程</label>
+    <label for="course_id" class="form-label">Select Modules</label>
     <select id="course_id" name="course_id" class="form-select" required>
-      <option value="" selected disabled>请选择课程</option>
+      <option value="" selected disabled>Please select a module</option>
       {% for c in courses %}
         <option value="{{ c.id }}">{{ c.name }} (ID: {{ c.id }})</option>
       {% endfor %}
     </select>
   </div>
   <div class="col-md-4">
-    <label for="graduation_date" class="form-label">毕业日期</label>
+    <label for="graduation_date" class="form-label">Graduation Date</label>
     <input type="date" class="form-control" id="graduation_date" name="graduation_date">
   </div>
   <div class="col-12">
-    <button type="submit" class="btn btn-primary">创建并选课</button>
+    <button type="submit" class="btn btn-primary">Create and Select Modules</button>
   </div>
 </form>
 {% endblock %}

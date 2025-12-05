@@ -1,31 +1,31 @@
 {% extends 'base.html' %}
 {% block content %}
-<h4>高风险学生列表</h4>
-<p class="text-muted">识别规则：压力等级 ≥ 4。可按日期筛选，或不填日期时按每位学生最新一次记录去重。</p>
+<h4>List of High-Risk Students</h4>
+<p class="text-muted">Identification Rule: Pressure Level ≥ 4. Results can be filtered by date, or if no date is specified, duplicate entries will be removed based on each student's most recent record.</p>
 
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label for="date" class="col-form-label">筛选日期</label>
+    <label for="date" class="col-form-label">Filter by date</label>
   </div>
   <div class="col-auto">
     <input type="date" class="form-control" id="date" name="date" value="{{ selected_date or '' }}" placeholder="YYYY-MM-DD">
   </div>
   <div class="col-auto">
-    <button type="submit" class="btn btn-primary">应用筛选</button>
-    <a href="/wellbeing/at-risk" class="btn btn-outline-secondary">清除筛选</a>
+    <button type="submit" class="btn btn-primary">Apply Filters</button>
+    <a href="/wellbeing/at-risk" class="btn btn-outline-secondary">Clear Filters</a>
   </div>
 </form>
 
 {% if selected_date %}
-  <div class="alert alert-info py-2">当前按日期筛选：<b>{{ selected_date }}</b></div>
+  <div class="alert alert-info py-2">Currently filtered by date:<b>{{ selected_date }}</b></div>
 {% else %}
-  <div class="alert alert-info py-2">当前显示：每位学生的<b>最新一次</b>记录（已自动去重）。</div>
+  <div class="alert alert-info py-2">Currently displayed: Each student's <b>most recent</b> record (automatically deduplicated).</div>
 {% endif %}
 
 {% if count and table_html %}
-  <div class="alert alert-success py-2">当前高风险学生人数：<b>{{ count }}</b></div>
+  <div class="alert alert-success py-2">Current number of high-risk students:<b>{{ count }}</b></div>
   <div class="table-responsive">{{ table_html|safe }}</div>
 {% else %}
-  <div class="alert alert-secondary">暂无符合条件的高风险学生数据。</div>
+  <div class="alert alert-secondary">No high-risk student data currently meets the criteria.</div>
 {% endif %}
 {% endblock %}
