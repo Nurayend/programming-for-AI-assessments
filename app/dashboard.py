@@ -17,8 +17,6 @@ TEAM TASKS:
 # -*- coding: utf-8 -*-
 """
 Flask 应用入口（app 包）
-- 提供简单的前端界面与后端路由，组成可运行的可视化程序
-- 兼容 macOS / Windows，尽量避免中文/英文乱码
 """
 import os
 import sys
