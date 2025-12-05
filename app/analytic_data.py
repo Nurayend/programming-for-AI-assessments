@@ -1,10 +1,10 @@
 """
 FILE: app/analytic_data.py
 DESCRIPTION:
-    面向 Flask 可视化的分析与绘图函数集合。
-    - 课程主任分析：全局散点、按课程相关性、课程均值散点、压力水平直方图
-    - 学生个体时序：压力/睡眠随时间
-    - 返回 Matplotlib Figure（服务器输出 PNG），不在此处 plt.show()
+    A collection of analysis and plotting functions for Flask visualization.
+    - Course director analysis: global scatter plot, by course correlation, course mean scatter plot, stress level histogram
+    - Individual student time series: stress/sleep over time
+    - Returns a Matplotlib Figure (server outputs PNG), no plt.show() here
 """
 
 import pandas as pd
