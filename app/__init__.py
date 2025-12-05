@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Flask 应用入口（app 包）
-- 提供简单的前端界面与后端路由，组成可运行的可视化程序
-- 兼容 macOS / Windows，尽量避免中文/英文乱码
+Flask application entry point (app package)
+- It provides a simple front-end interface and back-end routing to form a runnable visual program
+- Compatible with macOS/Windows, and will minimize Chinese/English character encoding issues
 """
 import os
 import sys
@@ -10,7 +10,7 @@ import io
 import base64
 from datetime import date
 
-# 确保无图形界面环境下也能绘图（服务器/命令行）
+# Ensure drawing is possible even without a graphical interface (server/command line)
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ import pandas as pd
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 
-# 包内相对导入
+# relative import within a package
 try:
     from .db_manager import DatabaseManager
     from .analytics import check_at_risk_students
@@ -32,7 +32,7 @@ try:
         build_student_stress_timeseries_figure,
         build_student_sleep_timeseries_figure,
     )
-except ImportError:  # 允许脚本式运行
+except ImportError:  # Allow script-based execution
     from db_manager import DatabaseManager
     from analytics import check_at_risk_students
     from analytic_data import (
@@ -53,19 +53,19 @@ def create_app():
         template_folder="templates",
     )
 
-    # 用于 flash 消息
+    # Used for flash messages
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
-    # 确保 JSON 中文不转义
+    # Ensure that Chinese characters in JSON are not escaped
     app.config["JSON_AS_ASCII"] = False
 
-    # 控制台输出尽量使用 UTF-8，避免 Windows 控制台乱码
+    # Use UTF-8 for console output whenever possible to avoid garbled characters in the Windows console
     try:
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
 
-    # 所有文本响应强制 UTF-8
+    # All text responses must be UTF-8
     @app.after_request
     def _force_utf8(response):
         ctype = response.headers.get("Content-Type", "")
@@ -76,7 +76,7 @@ def create_app():
     db = DatabaseManager()
 
     # -----------------------------
-    # 工具：构造全局出勤-成绩 DataFrame（绘图用）
+    # Tools: Construct a global attendance-grade DataFrame (for plotting)
     # -----------------------------
     def _build_global_attendance_grade_df():
         att_data, grade_data = db.get_analytics_data()
@@ -99,20 +99,20 @@ def create_app():
         return df
 
     # -----------------------------
-    # 路由：主页
+    # Routing: Homepage
     # -----------------------------
     @app.route("/")
     def index():
         return render_template("index.html")
 
     # -----------------------------
-    # 路由：学生列表（查）
+    # Routing: Student List (Search)
     # -----------------------------
     @app.route("/students")
     def students_list():
         include_inactive = request.args.get("all") == "1"
         students = db.get_all_students(include_inactive=include_inactive)
-        # 课程名称映射
+        # Course Name Mapping
         student_courses_map = {}
         for s in students:
             courses = db.get_courses_by_student(s.id)
@@ -125,13 +125,13 @@ def create_app():
         )
 
     # -----------------------------
-    # 路由：编辑学生（改）
+    # Routing: Edit Student (Modified)
     # -----------------------------
     @app.route("/students/<int:student_id>/edit", methods=["GET", "POST"])
     def students_edit(student_id):
         student = db.get_student(student_id)
         if not student:
-            flash("学生不存在", "warning")
+            flash("The student does not exist.", "warning")
             return redirect(url_for("students_list"))
         if request.method == "POST":
             new_status = request.form.get("status")
@@ -140,9 +140,9 @@ def create_app():
                 db.update_student_status(student_id, new_status)
             if graduation_date:
                 db.update_student_graduation(student_id, graduation_date)
-            flash("已保存修改", "success")
+            flash("Edits saved", "success")
             return redirect(url_for("students_edit", student_id=student_id))
-        # GET 渲染
+        # GET rendering
         enrolled_courses = db.get_courses_by_student(student_id)
         all_courses = db.get_all_courses()
         enrolled_ids = set(c.id for c in enrolled_courses)
@@ -155,16 +155,16 @@ def create_app():
         )
 
     # -----------------------------
-    # 路由：删除学生（删）
+    # Routing: Delete student (delete)
     # -----------------------------
     @app.route("/students/<int:student_id>/delete", methods=["POST"]) 
     def students_delete(student_id):
         ok, msg = db.delete_student(student_id)
-        flash(("成功：" if ok else "失败：") + msg, "success" if ok else "warning")
+        flash(("success: " if ok else "fail: ") + msg, "success" if ok else "warning")
         return redirect(url_for("students_list"))
 
     # -----------------------------
-    # 路由：选课管理（增删关系）
+    # Routing: Course Selection Management (Add/Delete Relationships)
     # -----------------------------
     @app.route("/students/<int:student_id>/enroll", methods=["POST"]) 
     def students_enroll(student_id):
@@ -172,10 +172,10 @@ def create_app():
         try:
             cid = int(course_id)
         except Exception:
-            flash("课程选择有误", "warning")
+            flash("Wrong course selection", "warning")
             return redirect(url_for("students_edit", student_id=student_id))
         ok, msg = db.enroll_student(student_id, cid)
-        flash(("成功：" if ok else "失败：") + msg, "success" if ok else "warning")
+        flash(("success: " if ok else "fail: ") + msg, "success" if ok else "warning")
         return redirect(url_for("students_edit", student_id=student_id))
 
     @app.route("/students/<int:student_id>/unenroll", methods=["POST"]) 
@@ -184,14 +184,14 @@ def create_app():
         try:
             cid = int(course_id)
         except Exception:
-            flash("参数有误", "warning")
+            flash("Incorrect parameters", "warning")
             return redirect(url_for("students_edit", student_id=student_id))
         ok, msg = db.remove_enrollment(student_id, cid)
-        flash(("成功：" if ok else "失败：") + msg, "success" if ok else "warning")
+        flash(("success: " if ok else "fail: ") + msg, "success" if ok else "warning")
         return redirect(url_for("students_edit", student_id=student_id))
 
     # -----------------------------
-    # 路由：学生入学 + 选课
+    # Routing: Student Enrollment + Course Selection
     # -----------------------------
     @app.route("/students/add", methods=["GET", "POST"])
     def add_student():
@@ -202,19 +202,19 @@ def create_app():
                 course_id = int(request.form.get("course_id"))
                 graduation_date = request.form.get("graduation_date") or date.today().isoformat()
             except Exception:
-                flash("输入有误，请检查。", "danger")
+                flash("There is an error in the input. Please check.", "danger")
                 return render_template("students_add.html", courses=courses)
 
             ok, msg = db.add_student(student_id, course_id, graduation_date)
             if ok:
-                flash("学生创建并成功选课：" + msg, "success")
+                flash("Student creates and successfully selects courses: " + msg, "success")
                 return redirect(url_for("add_student"))
             else:
-                flash("操作失败：" + msg, "warning")
+                flash("Operation failed: " + msg, "warning")
         return render_template("students_add.html", courses=courses)
 
     # -----------------------------
-    # 路由：提交健康问卷
+    # Routing: Submit a health questionnaire
     # -----------------------------
     @app.route("/wellbeing/survey", methods=["GET", "POST"])
     def wellbeing_survey():
@@ -224,21 +224,22 @@ def create_app():
                 stress_level = int(request.form.get("stress_level"))
                 sleep_hours = float(request.form.get("sleep_hours"))
             except Exception:
-                flash("输入有误，请检查。", "danger")
+                flash("There is an error in the input. Please check.", "danger")
                 return render_template("wellbeing_survey.html")
 
             passed_date = request.form.get("passed_date") or None
             ok, msg = db.log_survey_response(student_id, stress_level, sleep_hours, passed_date=passed_date)
-            flash(("成功：" if ok else "警告：") + msg, "success" if ok else "warning")
+            flash(("success: " if ok else "warn: ") + msg, "success" if ok else "warning")
             return redirect(url_for("wellbeing_survey"))
         return render_template("wellbeing_survey.html")
 
     # -----------------------------
-    # 路由：查看高风险学生
+    # Routing: View high-risk students
     # -----------------------------
     @app.route("/wellbeing/at-risk")
     def at_risk():
-        # 支持日期筛选。若提供 ?date=YYYY-MM-DD 则按该日期筛查；否则按每位学生最新一次记录去重
+        # Date filtering is supported. If ?date=YYYY-MM-DD is provided, 
+        # the filter will be based on that date; otherwise, the filter will be based on the most recent record for each student
         selected_date = request.args.get("date") or None
         if selected_date:
             df = check_at_risk_students(visualize=False, on_date=selected_date, latest_only=False)
@@ -249,11 +250,11 @@ def create_app():
         return render_template("at_risk.html", table_html=html_table, count=count, selected_date=selected_date)
 
     # -----------------------------
-    # 路由：课程主任分析（出勤 vs 成绩）
+    # Routing: Course Director Analysis (Attendance vs. Grades)
     # -----------------------------
     @app.route("/analytics")
     def analytics_page():
-        # 读取可选学生ID参数，用于在同一页面展示个体时序图
+        # Read the optional student ID parameter to display individual time series diagrams on the same page
         sid = request.args.get("student_id")
         student_id = int(sid) if sid and sid.isdigit() else None
         results = calculate_attendance_vs_grades(visualize=False)
@@ -262,7 +263,7 @@ def create_app():
         table_html = per_course_df.to_html(classes=["table", "table-bordered", "table-sm"], index=False, border=0) if per_course_df is not None and not per_course_df.empty else None
         return render_template("analytics.html", global_r=global_r, table_html=table_html, student_id=student_id)
 
-    # 学生个体时序图（仅图片端点，嵌入课程主任分析页面）
+    # Individual student time series graph (image endpoints only, embedded in the course director's analysis page)
     @app.route("/analytics/student/<int:student_id>/stress.png")
     def analytics_student_stress(student_id: int):
         fig = build_student_stress_timeseries_figure(student_id)
@@ -287,10 +288,10 @@ def create_app():
         resp.headers["Content-Type"] = "image/png"
         return resp
 
-    # 动态生成全局散点图（PNG）
+    # Dynamically generate a global scatter plot (PNG)
     @app.route("/analytics/global_plot.png")
     def global_plot():
-        # 使用 analytic_data 的可视化函数
+        # Visualization functions using analytic_data
         fig = build_global_scatter_figure()
         buf = io.BytesIO()
         plt.tight_layout()
@@ -301,10 +302,10 @@ def create_app():
         resp.headers["Content-Type"] = "image/png"
         return resp
 
-    # 动态生成：按课程相关性柱状图
+    # Dynamically generated: Bar chart based on course relevance
     @app.route("/analytics/per_course_bar.png")
     def per_course_bar():
-        # 使用 analytic_data 的可视化函数
+        # Visualization functions using analytic_data
         fig = build_per_course_correlation_bar_figure()
         buf = io.BytesIO()
         plt.tight_layout()
@@ -315,7 +316,7 @@ def create_app():
         resp.headers["Content-Type"] = "image/png"
         return resp
 
-    # 动态生成：压力水平分布直方图（学生数量）
+    # Dynamically generated: Histogram of stress level distribution (number of students)
     @app.route("/analytics/stress_hist.png")
     def stress_hist():
         fig = build_stress_histogram_figure(recent_only=True)
@@ -328,7 +329,7 @@ def create_app():
         resp.headers["Content-Type"] = "image/png"
         return resp
 
-    # 动态生成：压力分布图（健康）
+    # Dynamically generated: Pressure distribution map (health)
     @app.route("/wellbeing/stress_distribution.png")
     def stress_distribution():
         df = _get_survey_df()
@@ -351,10 +352,10 @@ def create_app():
         resp.headers["Content-Type"] = "image/png"
         return resp
 
-    # 动态生成：按课程的平均出勤 vs 平均成绩（每门课一个点）
+    # Dynamically generated: Average attendance vs. average grade (one point per course)
     @app.route("/analytics/per_course_avg_scatter.png")
     def per_course_avg_scatter():
-        # 使用 analytic_data 的可视化函数
+        # Visualization functions using analytic_data
         fig = build_per_course_avg_scatter_figure()
         buf = io.BytesIO()
         plt.tight_layout()
@@ -366,7 +367,7 @@ def create_app():
         return resp
 
     # -----------------------------
-    # 路由：作业管理
+    # Routing: Assessment Management
     # -----------------------------
     @app.route("/assessments", methods=["GET", "POST"])
     def assessments_page():
@@ -380,11 +381,11 @@ def create_app():
                 cid = int(course_id)
                 max_s = int(max_score)
                 if not title:
-                    raise ValueError("标题为空")
+                    raise ValueError("The title is empty.")
                 db.add_assessment(title, cid, deadline, max_s)
-                flash("作业已创建", "success")
+                flash("The assessment has been created.", "success")
             except Exception as e:
-                flash(f"创建失败：{e}", "warning")
+                flash(f"Creation failed: {e}", "warning")
             return redirect(url_for("assessments_page", course_id=course_id))
         # GET
         course_id = request.args.get("course_id")
@@ -398,7 +399,7 @@ def create_app():
         return render_template("assessments.html", courses=courses, course_id=cid, assessments=assessments)
 
     # -----------------------------
-    # 路由：成绩/提交管理
+    # Routing: Grade/Submission Management
     # -----------------------------
     @app.route("/grades", methods=["GET"])
     def grades_page():
@@ -420,14 +421,14 @@ def create_app():
         if cid:
             assessments = db.get_assessments_by_course(cid)
         if cid and aid:
-            # 获取作业信息
+            # Get assessment information
             a = db.get_assessment(aid)
             if a:
                 max_score = a.max_score
                 deadline = a.deadline
-            # 课程选课学生
+            # Course selection students (filtering students by course)
             students = db.get_students_by_course(cid)
-            # 该作业已提交记录
+            # This assignment has been submitted
             subs = {row['student_id']: row for row in db.get_submissions_by_assessment(aid)}
             for s in students:
                 row = subs.get(s.id, {})
@@ -453,13 +454,13 @@ def create_app():
             cid = int(course_id)
             aid = int(assessment_id)
         except Exception:
-            flash("参数有误", "warning")
+            flash("Incorrect parameters", "warning")
             return redirect(url_for("grades_page"))
         a = db.get_assessment(aid)
         if not a:
-            flash("作业不存在", "warning")
+            flash("The assignment does not exist", "warning")
             return redirect(url_for("grades_page", course_id=cid))
-        # 遍历课程学生，读取表单中的日期与分数
+        # Iterate through the students in the course and read the dates and scores from the form
         students = db.get_students_by_course(cid)
         saved = 0
         for s in students:
@@ -470,16 +471,16 @@ def create_app():
             try:
                 score_f = float(score_val) if score_val not in (None, "") else None
                 if score_f is not None and (score_f < 0 or (a.max_score is not None and score_f > a.max_score)):
-                    raise ValueError("分数超出范围")
+                    raise ValueError("Score out of range")
                 db.upsert_submission(aid, s.id, sub_date or None, score_f if score_f is not None else None)
                 saved += 1
             except Exception as e:
-                flash(f"学生 {s.id} 保存失败：{e}", "warning")
-        flash(f"已保存 {saved} 条记录", "success")
+                flash(f"Student {s.id} failed to save：{e}", "warning")
+        flash(f"{saved} records have been saved", "success")
         return redirect(url_for("grades_page", course_id=cid, assessment_id=aid))
 
     # -----------------------------
-    # 路由：出勤管理
+    # Routing: Attendance Management
     # -----------------------------
     @app.route("/attendance", methods=["GET"])
     def attendance_page():
@@ -508,7 +509,7 @@ def create_app():
         try:
             cid = int(course_id)
         except Exception:
-            flash("参数有误", "warning")
+            flash("Incorrect parameters", "warning")
             return redirect(url_for("attendance_page"))
         students = db.get_students_by_course(cid)
         saved = 0
@@ -517,10 +518,10 @@ def create_app():
             if status in ("Present", "Absent", "Late"):
                 db.upsert_attendance(s.id, cid, lecture_date, status)
                 saved += 1
-        flash(f"已保存 {saved} 条出勤记录", "success")
+        flash(f"{saved} attendance records have been saved", "success")
         return redirect(url_for("attendance_page", course_id=cid, lecture_date=lecture_date))
 
-    # 健康检查
+    # Health check
     @app.route("/health")
     def health():
         return jsonify({"status": "ok"})
@@ -528,9 +529,9 @@ def create_app():
     return app
 
 
-# 允许直接 python -m app 运行
+# Allows direct execution via python -m app
 if __name__ == "__main__":
     app = create_app()
-    # host=0.0.0.0 便于本机/局域网访问；use_reloader=False 避免端口被重复绑定
+    # host=0.0.0.0 Easy access from local machine/LAN；use_reloader=False Avoid port being bound repeatedly
     port = int(os.environ.get("PORT", 5050))
     app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
