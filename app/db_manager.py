@@ -16,7 +16,7 @@ except ImportError:
 class DatabaseManager:
     def __init__(self, db_path=None):
         if db_path is None:
-            # 自动定位到 data/university.db
+            # Automatically locate data/university.db
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             self.db_path = os.path.join(base_dir, 'data', 'university.db')
         else:
