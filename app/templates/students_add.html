@@ -23,4 +23,47 @@
     <button type="submit" class="btn btn-primary">Create and Select Modules</button>
   </div>
 </form>
+
+<hr class="my-4">
+
+<div class="card shadow-sm">
+  <div class="card-header bg-light">
+    Batch import
+  </div>
+  <div class="card-body">
+    <p class="text-muted">Upload a CSV file to enroll multiple students and select modules in bulk.</p>
+    <ul>
+      <li>Supported columns: <code>student_id</code>, <code>course_id</code>, <code>graduation_date</code> (optional)</li>
+      <li>Accepts files with or without a header row</li>
+      <li>Date format recommended: <code>YYYY-MM-DD</code></li>
+    </ul>
+    <form method="post" action="/students/bulk_upload" enctype="multipart/form-data" class="row g-3">
+      <div class="col-md-6" lang="en">
+        <label for="csv_file" class="form-label">Open File</label>
+        <input type="file" id="csv_file" name="csv_file" class="visually-hidden" accept=".csv" required>
+        <label for="csv_file" class="btn btn-secondary">Choose CSV file</label>
+        <span id="csv_file_name" class="ms-2 text-muted">No file chosen</span>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-secondary">Upload and Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const input = document.getElementById('csv_file');
+    const nameSpan = document.getElementById('csv_file_name');
+    if (nameSpan && !nameSpan.textContent) {
+      nameSpan.textContent = 'No file chosen';
+    }
+    if (input) {
+      input.addEventListener('change', function() {
+        nameSpan.textContent = (input.files && input.files[0]) ? input.files[0].name : 'No file chosen';
+      });
+    }
+  })();
+</script>
+
 {% endblock %}
