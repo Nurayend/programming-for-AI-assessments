@@ -165,6 +165,142 @@ def calculate_attendance_vs_grades(visualize: bool = True) -> dict:
     course_corr_df = pd.DataFrame(course_corr_list)
     return {"Global_Correlation_R": global_correlation, "Per_Course_Correlation": course_corr_df}
 
+# ------------------------------------------
+# NEW: 3. Stress Level vs Grades Analysis
+# ------------------------------------------
+def calculate_stress_vs_grades(visualize: bool = True) -> dict:
+    """
+    Calculates:
+        - Global correlation between latest stress level & average score
+        - Per-course correlation (stress vs score)
+    """
+
+    # --- Load survey / grade data ---
+    survey_data = db_manager.get_raw_survey_data()
+    grade_data = db_manager.get_analytics_data()[1]
+
+    survey_df = pd.DataFrame(survey_data)
+    grade_df = pd.DataFrame(grade_data)
+
+    if survey_df.empty or grade_df.empty:
+        return {"Global_Correlation_R": None, "Per_Course_Correlation": pd.DataFrame()}
+
+    # Normalize dtype for student_id
+    survey_df["student_id"] = survey_df["student_id"].astype(str).str.strip()
+    grade_df["student_id"] = grade_df["student_id"].astype(str).str.strip()
+
+    survey_df['stress_level'] = pd.to_numeric(survey_df['stress_level'], errors='coerce')
+    survey_df['date'] = pd.to_datetime(survey_df['date'])
+    grade_df['score'] = pd.to_numeric(grade_df['score'], errors='coerce')
+
+    # --- Load enrollment + courses, normalize student_id ---
+    conn = db_manager.get_connection()
+
+    enrollment_df = pd.DataFrame(
+        conn.execute("SELECT student_id, course_id FROM Enrollment").fetchall(),
+        columns=['student_id', 'course_id']
+    )
+    courses_df = pd.DataFrame(
+        conn.execute("SELECT id, name FROM Courses").fetchall(),
+        columns=['course_id', 'course_name']
+    )
+    conn.close()
+
+    # Make enrollment student_id consistent (convert to str)
+    enrollment_df["student_id"] = enrollment_df["student_id"].astype(str).str.strip()
+    enrollment_df["course_id"] = enrollment_df["course_id"].astype(int)
+
+    # ------------------------------------------
+    # 1. Latest stress record per student
+    # ------------------------------------------
+    latest_stress = (
+        survey_df.sort_values(['student_id', 'date'])
+                 .drop_duplicates('student_id', keep='last')[['student_id', 'stress_level']]
+    )
+
+    # ------------------------------------------
+    # 2. Global average grade
+    # ------------------------------------------
+    global_grade = (
+        grade_df.groupby("student_id")["score"]
+                .mean()
+                .reset_index(name="avg_score")
+    )
+
+    # ------------------------------------------
+    # 3. Merge for global analysis
+    # ------------------------------------------
+    global_df = pd.merge(latest_stress, global_grade, on="student_id", how="inner")
+
+    global_correlation = (
+        global_df["stress_level"].corr(global_df["avg_score"])
+        if len(global_df) >= 2 else None
+    )
+
+    # Global Visualization
+    if visualize and not global_df.empty:
+        plt.figure(figsize=(6, 4))
+        sns.scatterplot(data=global_df, x="stress_level", y="avg_score")
+        plt.title(f"Global Stress vs Grades (R={global_correlation:.2f})")
+        plt.xlabel("Stress Level")
+        plt.ylabel("Average Score")
+        plt.tight_layout()
+        plt.show()
+        plt.close()
+
+    # ------------------------------------------
+    # 4. Per-course Stress vs Grades
+    # ------------------------------------------
+    stress_course_df = pd.merge(latest_stress, enrollment_df, on="student_id", how="inner")
+    grade_course_df = pd.merge(grade_df, enrollment_df, on="student_id", how="inner")
+
+    course_corr_list = []
+
+    for cid in enrollment_df["course_id"].unique():
+        course_stress = stress_course_df[stress_course_df["course_id"] == cid][['student_id', 'stress_level']]
+        course_grade = (
+            grade_course_df[grade_course_df["course_id"] == cid]
+                           .groupby("student_id")["score"]
+                           .mean()
+                           .reset_index()
+        )
+
+        course_df = pd.merge(course_stress, course_grade, on="student_id", how="inner")
+
+        if len(course_df) >= 2:
+            r = course_df["stress_level"].corr(course_df["score"])
+        else:
+            r = None
+
+        course_name = courses_df.loc[courses_df["course_id"] == cid, "course_name"].values[0]
+
+        course_corr_list.append({
+            "course_id": cid,
+            "course_name": course_name,
+            "Correlation_R": r
+        })
+
+        # Visualization per course
+        if visualize and not course_df.empty:
+            plt.figure(figsize=(5, 4))
+            sns.scatterplot(data=course_df, x="stress_level", y="score")
+            plt.title(f"{course_name}: Stress vs Grades")
+            plt.xlabel("Stress Level")
+            plt.ylabel("Score")
+            plt.tight_layout()
+            plt.show()
+            plt.close()
+
+    course_corr_df = pd.DataFrame(course_corr_list)
+
+    return {
+        "Global_Correlation_R": global_correlation,
+        "Per_Course_Correlation": course_corr_df
+    }
+
+
+
+
 
 # ------------------------------------------
 # 3. Main Execution (for VSCode Run)
@@ -194,3 +330,10 @@ if __name__ == '__main__':
             print(per_course_df)
     else:
         print("Per-course correlation: Not enough data.")
+
+    print("\n--- Stress vs Grades ---")
+stress_corr = calculate_stress_vs_grades()
+print(f"Global correlation (stress vs score): {stress_corr['Global_Correlation_R']}")
+print(stress_corr["Per_Course_Correlation"])
+
+
