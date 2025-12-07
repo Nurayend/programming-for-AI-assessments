@@ -38,6 +38,7 @@ def check_at_risk_students(stress_threshold: int = 4, visualize: bool = True, on
     Identify high-risk students based on stress_level >= threshold.
     Returns a sorted DataFrame with most recent entries first.
     """
+    #从数据库读取数据
     survey_data = db_manager.get_raw_survey_data()
     survey_df = pd.DataFrame(survey_data)
 
@@ -48,9 +49,9 @@ def check_at_risk_students(stress_threshold: int = 4, visualize: bool = True, on
     survey_df['student_id'] = survey_df['student_id'].astype(str).str.strip()
     survey_df['stress_level'] = pd.to_numeric(survey_df['stress_level'], errors='coerce')
     survey_df['sleep_hours'] = pd.to_numeric(survey_df['sleep_hours'], errors='coerce')
-
-    survey_df['Is_At_Risk'] = survey_df['stress_level'] >= stress_threshold
     survey_df['date'] = pd.to_datetime(survey_df['date'])
+    #特征提取（well-being）
+    survey_df['Is_At_Risk'] = survey_df['stress_level'] >= stress_threshold
 
     # 日期/去重筛选
     if on_date:
@@ -120,7 +121,7 @@ def calculate_attendance_vs_grades(visualize: bool = True) -> dict:
     # 将 Submissions 与 Enrollment 对应课程
     grade_df = pd.merge(grade_df, enrollment_df, on='student_id', how='inner')
 
-    # --- 全局分析 ---
+    # --- 全局分析 ---特征提取（原始数据 → 指标（features））
     global_att = att_df.groupby('student_id')['attendance_numeric'].mean().reset_index(name='avg_attendance_rate')
     global_grade = grade_df.groupby('student_id')['score'].mean().reset_index(name='avg_score')
     global_df = pd.merge(global_att, global_grade, on='student_id', how='inner')
