@@ -6,7 +6,7 @@ from app.db_manager import DatabaseManager
 
 def test_registration():
     print("=" * 60)
-    print("注册功能测试 (Registration Functionality Test)")
+    print("Registration Functionality Test")
     print("=" * 60)
     
     db = DatabaseManager()
@@ -86,7 +86,7 @@ def test_registration():
     print(f"information: {msg}")
     
     print("\n" + "=" * 60)
-    print("测试完成 (Test Complete)")
+    print("Test Complete")
     print("=" * 60)
 
 if __name__ == "__main__":
