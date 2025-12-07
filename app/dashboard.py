@@ -21,6 +21,7 @@ import io
 import base64
 from datetime import date
 from functools import wraps
+import csv
 
 # 确保无图形界面环境下也能绘图（服务器/命令行）
 import matplotlib
@@ -352,14 +353,89 @@ def create_app():
             except Exception:
                 flash("The input is incorrect. Please check.", "danger")
                 return render_template("students_add.html", courses=courses)
-
+            # Process valid POST
             ok, msg = db.add_student(student_id, course_id, graduation_date)
             if ok:
-                flash("Students created and successfully enrolled in courses：" + msg, "success")
+                flash("Students created and successfully enrolled in courses: " + msg, "success")
                 return redirect(url_for("add_student"))
             else:
-                flash("Operation failed:" + msg, "warning")
+                flash("Operation failed: " + msg, "warning")
         return render_template("students_add.html", courses=courses)
+
+
+    @app.route("/students/bulk_upload", methods=["POST"])
+    @login_required
+    @roles_required('director')
+    def students_bulk_upload():
+        file = request.files.get("csv_file")
+        if not file or file.filename == "":
+            flash("Please select a CSV file to upload.", "warning")
+            return redirect(url_for("add_student"))
+        try:
+            content = file.read().decode("utf-8-sig", errors="ignore")
+            lines = [ln for ln in content.splitlines() if ln.strip() != ""]
+            successes = 0
+            failures = 0
+            errors = []
+
+            # Try DictReader first (header-aware)
+            dict_reader = csv.DictReader(lines)
+            header_lower = [(h or "").strip().lower() for h in (dict_reader.fieldnames or [])]
+
+            def get_ci(d, key):
+                target = key.lower()
+                for k, v in d.items():
+                    if (k or "").strip().lower() == target:
+                        return v
+                return None
+
+            if 'student_id' in header_lower and 'course_id' in header_lower:
+                # Use header-based parsing
+                for i, row in enumerate(dict_reader, start=2):  # data starts at line 2 when header exists
+                    try:
+                        sid = int(str(get_ci(row, 'student_id')).strip())
+                        cid = int(str(get_ci(row, 'course_id')).strip())
+                        gdate_raw = get_ci(row, 'graduation_date')
+                        gdate = str(gdate_raw).strip() if gdate_raw not in (None, "") else date.today().isoformat()
+                        ok, msg = db.add_student(sid, cid, gdate)
+                        if ok:
+                            successes += 1
+                        else:
+                            failures += 1
+                            errors.append(f"Line {i}: {msg}")
+                    except Exception as e:
+                        failures += 1
+                        errors.append(f"Line {i}: {e}")
+            else:
+                # Fallback: plain rows without header -> [student_id, course_id, graduation_date(optional)]
+                reader = csv.reader(lines)
+                for i, row in enumerate(reader, start=1):
+                    if not row:
+                        continue
+                    try:
+                        sid = int(str(row[0]).strip())
+                        cid = int(str(row[1]).strip())
+                        gdate = str(row[2]).strip() if len(row) > 2 and str(row[2]).strip() != "" else date.today().isoformat()
+                        ok, msg = db.add_student(sid, cid, gdate)
+                        if ok:
+                            successes += 1
+                        else:
+                            failures += 1
+                            errors.append(f"Line {i}: {msg}")
+                    except Exception as e:
+                        failures += 1
+                        errors.append(f"Line {i}: {e}")
+
+            summary = f"CSV processed. Success: {successes}, Failed: {failures}."
+            if errors:
+                preview = " | ".join(errors[:5])
+                flash(summary + " Errors: " + preview, "warning")
+            else:
+                flash(summary, "success")
+        except Exception as e:
+            flash(f"Failed to process CSV: {e}", "danger")
+        return redirect(url_for("add_student"))
+
 
     # -----------------------------
     # 路由：提交健康问卷 == Route: Submit the health questionnaire
